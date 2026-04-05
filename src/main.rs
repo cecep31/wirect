@@ -39,8 +39,9 @@ async fn main() {
 
     let new_domain = std::env::var("NEW_DOMAIN")
         .expect("NEW_DOMAIN must be set in .env or environment");
+    let host = std::env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
     let port = std::env::var("PORT").unwrap_or_else(|_| "8080".to_string());
-    let bind_addr = format!("127.0.0.1:{port}");
+    let bind_addr = format!("{host}:{port}");
 
     let state = AppState {
         new_domain: Arc::new(new_domain),

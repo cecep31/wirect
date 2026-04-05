@@ -8,12 +8,14 @@ Set these environment variables:
 
 ```env
 NEW_DOMAIN=https://newdomain.com
+HOST=0.0.0.0
 PORT=8080
 ```
 
 Notes:
 
 - `NEW_DOMAIN` should include the target scheme, for example `https://newdomain.com`.
+- `HOST` is optional. If omitted, the server uses `0.0.0.0`.
 - `PORT` is optional. If omitted, the server uses port `8080`.
 
 ## Run
@@ -40,4 +42,18 @@ Expected response:
 ```text
 HTTP/1.1 308 Permanent Redirect
 location: https://newdomain.com/blog/post?id=42
+```
+
+## Docker
+
+Build image:
+
+```bash
+docker build -t wirect .
+```
+
+Run container:
+
+```bash
+docker run --rm -p 8080:8080 -e NEW_DOMAIN=https://newdomain.com wirect
 ```
