@@ -46,14 +46,14 @@ location: https://newdomain.com/blog/post?id=42
 
 ## Docker
 
-Build image:
+Pull image:
 
 ```bash
-docker build -t wirect .
+docker pull cecep31/wirect:latest
 ```
 
 Run container:
 
 ```bash
-docker run --rm -p 8080:8080 -e NEW_DOMAIN=https://newdomain.com wirect
+docker run --rm -p 8080:8080 -e NEW_DOMAIN=https://newdomain.com cecep31/wirect:latest
 ```
