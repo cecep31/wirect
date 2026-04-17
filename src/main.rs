@@ -9,24 +9,26 @@ use std::sync::Arc;
 
 #[derive(Clone)]
 struct AppState {
-    new_domain: Arc<String>,
+    base_url: Arc<str>,
 }
 
-async fn domain_redirect_handler(
-    State(state): State<AppState>,
-    uri: Uri,
-) -> Response {
-    let path = uri.path();
-    let query = uri.query().unwrap_or("");
-    let base = state.new_domain.trim_end_matches('/');
+impl AppState {
+    fn redirect_location(&self, uri: &Uri) -> String {
+        let base = &*self.base_url;
+        let path = uri.path();
+        let query = uri.query().unwrap_or("");
 
-    let new_url = if query.is_empty() {
-        format!("{base}{path}")
-    } else {
-        format!("{base}{path}?{query}")
-    };
+        if query.is_empty() {
+            format!("{base}{path}")
+        } else {
+            format!("{base}{path}?{query}")
+        }
+    }
+}
 
-    Redirect::permanent(&new_url).into_response()
+async fn redirect_handler(State(state): State<AppState>, uri: Uri) -> Response {
+    let location = state.redirect_location(&uri);
+    Redirect::permanent(&location).into_response()
 }
 
 async fn health_check() -> &'static str {
@@ -39,22 +41,21 @@ async fn main() {
 
     let new_domain = std::env::var("NEW_DOMAIN")
         .expect("NEW_DOMAIN must be set in .env or environment");
-    let host = std::env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
-    let port = std::env::var("PORT").unwrap_or_else(|_| "8080".to_string());
+    let base_url: Arc<str> = Arc::from(new_domain.trim_end_matches('/').to_string());
+
+    let host = std::env::var("HOST").unwrap_or_else(|_| "0.0.0.0".into());
+    let port = std::env::var("PORT").unwrap_or_else(|_| "8080".into());
     let bind_addr = format!("{host}:{port}");
 
-    let state = AppState {
-        new_domain: Arc::new(new_domain),
-    };
+    let state = AppState { base_url };
+
+    println!("Starting redirect server on http://{bind_addr}");
+    println!("Redirecting all incoming requests to {}", state.base_url);
 
     let app = Router::new()
         .route("/health", get(health_check))
-        .route("/", any(domain_redirect_handler))
-        .route("/{*path}", any(domain_redirect_handler))
-        .with_state(state.clone());
-
-    println!("Starting redirect server on http://{bind_addr}");
-    println!("Redirecting all incoming requests to {}", state.new_domain);
+        .fallback(any(redirect_handler))
+        .with_state(state);
 
     let listener = tokio::net::TcpListener::bind(&bind_addr)
         .await
